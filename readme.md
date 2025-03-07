@@ -1,6 +1,6 @@
 # AI Pet Application
 
-Ứng dụng AI Pet tương tác với người dùng thông qua nhận diện khuôn mặt và trò chuyện. 
+Ứng dụng AI Pet tương tác với người dùng thông qua nhận diện khuôn mặt và trò chuyện.
 
 ## Cài đặt
 
@@ -13,4 +13,3 @@ pip install -r requirements.txt
 ```bash
 streamlit run AI_Pet_Webapp.py
 ```
-
