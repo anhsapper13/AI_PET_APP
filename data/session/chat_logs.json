@@ -163,5 +163,35 @@
     "timestamp": "2025-03-07 01:47:23",
     "user": "are you a cat?",
     "bot": "I am a cat."
+  },
+  {
+    "timestamp": "2025-03-07 10:50:24",
+    "user": "hi",
+    "bot": "Hey! :D"
+  },
+  {
+    "timestamp": "2025-03-07 10:50:57",
+    "user": "do you know the president of america",
+    "bot": "I do not. I'm not American."
+  },
+  {
+    "timestamp": "2025-03-07 10:51:11",
+    "user": "so where do you live",
+    "bot": "I live in the UK"
+  },
+  {
+    "timestamp": "2025-03-07 10:51:26",
+    "user": "so do you know the president of UK",
+    "bot": "I do not. I'm not a citizen."
+  },
+  {
+    "timestamp": "2025-03-07 10:51:40",
+    "user": "who are you",
+    "bot": "I'm a guy who likes to play video games."
+  },
+  {
+    "timestamp": "2025-03-07 11:09:28",
+    "user": "hi",
+    "bot": "Hey! :D"
   }
 ]

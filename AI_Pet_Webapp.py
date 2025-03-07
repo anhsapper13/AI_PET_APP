@@ -18,6 +18,46 @@ os.makedirs("data", exist_ok=True)
 os.makedirs("data/user", exist_ok=True)
 os.makedirs("data/session", exist_ok=True)
 
+# Thêm kiểm tra và thông báo về webcam
+if not st.session_state.get("camera_allowed"):
+    st.info("⚠️ Vui lòng cho phép truy cập camera khi được hỏi.")
+    st.session_state["camera_allowed"] = True
+
+# Cache model loading để tránh tải lại
+@st.cache_resource
+def load_models():
+    with st.spinner("Đang tải AI models..."):
+        tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
+        model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
+    return tokenizer, model
+
+# Xử lý lưu file an toàn
+def safe_save_file(file_path, data):
+    try:
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        if isinstance(data, torch.Tensor):
+            torch.save(data, file_path)
+        else:
+            with open(file_path, 'w') as f:
+                json.dump(data, f)
+        return True
+    except Exception as e:
+        st.error(f"Lỗi khi lưu file: {str(e)}")
+        return False
+
+# Xử lý đọc file an toàn
+def safe_load_file(file_path, is_torch=False):
+    try:
+        if not os.path.exists(file_path):
+            return None
+        if is_torch:
+            return torch.load(file_path)
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        st.error(f"Lỗi khi đọc file: {str(e)}")
+        return None
+
 # ======= 1. AUTHENTICATION MODULE =======
 
 class UserAuth:
@@ -27,47 +67,52 @@ class UserAuth:
         self.resnet = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
         
     def capture_and_save_owner_embedding(self, webcam_placeholder):
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            raise IOError("Cannot open webcam")
-        
-        start_time = time.time()
-        timeout = 10  # Timeout after 10 seconds
-        
-        while time.time() - start_time < timeout:
-            ret, frame = cap.read()
-            if not ret:
-                continue
+        try:
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                st.error("❌ Không thể truy cập camera. Vui lòng cho phép truy cập camera và thử lại.")
+                return False
             
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            webcam_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
+            start_time = time.time()
+            timeout = 10  # Timeout after 10 seconds
             
-            pil_img = Image.fromarray(frame_rgb)
-            boxes, _ = self.mtcnn.detect(pil_img)
-            
-            if boxes is not None:
-                areas = [(box[2] - box[0]) * (box[3] - box[1]) for box in boxes]
-                largest_face_index = areas.index(max(areas))
-                largest_face = self.mtcnn.extract(pil_img, [boxes[largest_face_index]], None)
+            while time.time() - start_time < timeout:
+                ret, frame = cap.read()
+                if not ret:
+                    continue
                 
-                if largest_face is not None:
-                    owner_embedding = self.resnet(largest_face).detach()
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                webcam_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
+                
+                pil_img = Image.fromarray(frame_rgb)
+                boxes, _ = self.mtcnn.detect(pil_img)
+                
+                if boxes is not None:
+                    areas = [(box[2] - box[0]) * (box[3] - box[1]) for box in boxes]
+                    largest_face_index = areas.index(max(areas))
+                    largest_face = self.mtcnn.extract(pil_img, [boxes[largest_face_index]], None)
                     
-                    # Save both embedding and user info
-                    user_data = {
-                        "username": "Owner",
-                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    }
-                    
-                    torch.save(owner_embedding, 'data/user/facial_embedding.pt')
-                    with open('data/user/user_info.json', 'w') as f:
-                        json.dump(user_data, f)
+                    if largest_face is not None:
+                        owner_embedding = self.resnet(largest_face).detach()
                         
-                    cap.release()
-                    return True
-        
-        cap.release()
-        return False
+                        # Save both embedding and user info
+                        user_data = {
+                            "username": "Owner",
+                            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        
+                        torch.save(owner_embedding, 'data/user/facial_embedding.pt')
+                        with open('data/user/user_info.json', 'w') as f:
+                            json.dump(user_data, f)
+                            
+                        cap.release()
+                        return True
+            
+            cap.release()
+            return False
+        except Exception as e:
+            st.error(f"❌ Lỗi khi sử dụng camera: {str(e)}")
+            return False
     
     def is_owner_present(self):
         if not os.path.exists('data/user/facial_embedding.pt'):
